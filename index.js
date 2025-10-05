@@ -16,7 +16,7 @@ const use_nvenc = false; // true = GPU (NVENC), false = CPU (libx265)
 const max_concurrent_processes = 3; // Numer of downloads/transcodes to run in parallel
 
 //Specifiy your OS either as 'win' for Windows machines or 'mac' for MacOS/Linux machines
-const machine_os = 'win';
+const machine_os = 'YOUR_OS_HERE';
 
 //Cookie used to retreive video information
 const cookies = [
