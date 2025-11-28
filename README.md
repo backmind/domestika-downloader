@@ -5,75 +5,135 @@ This script is a simple way to download a full course from Domestika.
 > **Warning**
 > You need to own the course you want to download. So you either have to have bought it or got it for "free" with your premium account.
 
+## Requirements
+
+- Node.js
+- [N_m3u8DL-RE](https://github.com/nilaoda/N_m3u8DL-RE/releases) binary
+- ffmpeg (required for H.265 transcoding and codec detection)
+
 ## Installation
 
-Once you downloaded the Project, open the "index.js" file.
+### 1. Install N_m3u8DL-RE
 
-You will find the following variables:
+Download the latest version from [N_m3u8DL-RE releases](https://github.com/nilaoda/N_m3u8DL-RE/releases). Scroll down to the 'Assets' section and download the appropriate binary for your machine:
 
-```javascript
-  const course_url = "";
-  const subtitle_lang = "en";
-  const machine_os = "";
-  const cookies;
-  const _credentials_ = "";
+| OS | Architectures |
+|----|---------------|
+| Windows | arm64, x64 |
+| MacOS | arm64, x64 |
+| Linux | arm64, x64 |
+
+Unzip the file and place the binary in this repo's root folder.
+
+> **Note:** On Windows the file is `N_m3u8DL-RE.exe`, on MacOS/Linux it's `N_m3u8DL-RE`. Do not rename.
+
+### 2. Install ffmpeg
+
+ffmpeg is required for H.265 transcoding and codec detection.
+
+**Windows:**
+```bash
+winget install ffmpeg
 ```
 
-The `course_url` is just the full URL of the course you want to download. For example:
-
-https://www.domestika.org/en/courses/3086-creating-animated-stories-with-after-effects/course
-
-IMPORTANT: you have to be on the "content" page. You know you are on the right site when at the end of the URL it says "/course".
-
-To get the _domestika_session and the \_credentials_ you will need to install a chrome extension called Cookie-Editor.
-
-After you installed the extension, log into domestika and open the extension.
-
-In the window popup, look for "\_domestika_session", click to open it and copy the contents of the Value field into the value field under cookies.
-
-Then look for the "_credentials_" cookie, copy the value of that into the "_credentials_" variable.
-
-If you want to change the subtitles that will be downloaded, just put the preferred language into the "subtitle_lang" variable. But make sure the language is avaiable first.
-
-The machine_os is just to specify whether the machine you are on is Windows or MacOS/Linux. If you are on a Windows machine, be sure to set:
-```javascript
-const machine_os = "win";
-```
-Otherwise if you are on MacOS or Linux:
-```javascript
-const machine_os = "mac";
+**MacOS:**
+```bash
+brew install ffmpeg
 ```
 
-Before you can start it, you have to download N_m3u8DL-RE from here: https://github.com/nilaoda/N_m3u8DL-RE/releases. Get the lastest version binary and place it in the root directory of the folder. To do so, simply scroll down to the 'Assets' section and download the appropriate binary based on your machine. Note there are binaries for Windows (on arm64 and x64 architectures), MacOS (on arm64 and x64 architectures) and Linux (on arm64 and x64 architectures). Download the compressed file that corresponds to your machine and architecture, unzip it, then place the binary in this repo's root folder. 
+**Linux (Debian/Ubuntu):**
+```bash
+sudo apt install ffmpeg
+```
 
-NOTE: For Windows, the file will be called "N_m3u8DL-RE.exe", while on MacOS and Linux, the file will be called "N_m3u8DL-RE". Do not change these names.
+Verify installation:
+```bash
+ffmpeg -version
+ffprobe -version
+```
 
-Also be sure you have ffmpeg installed.
-
-After you have done that, navigate to the repo, open a terminal and type
-
+### 3. Install Node dependencies
 ```bash
 npm i
 ```
 
-After that, to start the script type
+## Configuration
 
+Open `index.js` and configure the following variables:
+```javascript
+const course_urls = ['URL_1', 'URL_2'];  // Array of course URLs
+const subtitle_lang = 'en';
+const transcode_to_hevc = true;
+const use_nvenc = true;
+const max_concurrent_processes = 7;
+const machine_os = 'win';  // 'win' or 'mac'
+const cookies = [{ name: '_domestika_session', value: 'YOUR_COOKIE', domain: 'www.domestika.org' }];
+const _credentials_ = 'YOUR_CREDENTIALS';
+```
+
+### Configuration Options
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `course_urls` | Array of course URLs to download | — |
+| `subtitle_lang` | Subtitle language code (must be available) | `'en'` |
+| `transcode_to_hevc` | Enable H.265 transcoding after download | `true` |
+| `use_nvenc` | Use GPU (NVENC) for transcoding; `false` uses CPU (libx265) | `true` |
+| `max_concurrent_processes` | Maximum parallel downloads/transcodes | `7` |
+| `machine_os` | `'win'` for Windows, `'mac'` for MacOS/Linux | — |
+
+### Getting Cookies and Credentials
+
+1. Install the [Cookie-Editor](https://chrome.google.com/webstore/detail/cookie-editor/) browser extension
+2. Log into Domestika
+3. Open Cookie-Editor and find:
+   - `_domestika_session` → copy Value into cookies array
+   - `_credentials_` → copy Value into `_credentials_` variable
+
+### Course URL Format
+
+URLs must point to the course content page (ending in `/course`):
+```
+https://www.domestika.org/en/courses/3086-creating-animated-stories-with-after-effects/course
+```
+
+## Usage
 ```bash
 npm run start
 ```
 
-NOTE: On MacOS and Linux, depending on your perimssions, you may encounter an error from `N_m3u8DL-RE`:
-```bash
-N_m3u8DL-RE: Permission denied
-```
+Output location: `domestika_courses/{coursename}/`
 
-If this occurs, open a terminal and grant execute permissions for the binary:
+### Transcoding Behavior
+
+When `transcode_to_hevc` is enabled:
+- Videos are checked via ffprobe before transcoding
+- Files already in H.265/HEVC are skipped
+- Original files are replaced with transcoded versions
+
+NVENC requires an NVIDIA GPU with encoding support. If unavailable, set `use_nvenc = false` to use CPU encoding (slower but universal).
+
+## Troubleshooting
+
+### Permission denied on MacOS/Linux
 ```bash
 chmod +x N_m3u8DL-RE
 ```
-This should resolve the issue, and you can re-run the start command.
 
-All the courses will be downloaded in a folder called "domestika_courses/{coursename}/".
+### NVENC errors
+
+If you see NVENC-related errors and don't have an NVIDIA GPU:
+```javascript
+const use_nvenc = false;
+```
+
+### Transcode failures
+
+Ensure ffmpeg and ffprobe are in your PATH:
+```bash
+which ffmpeg
+which ffprobe
+```
 
 ## Special Thanks
 
